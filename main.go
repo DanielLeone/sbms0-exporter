@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"regexp"
 	"slices"
 	"strconv"
@@ -537,30 +536,34 @@ func setAndExport(ch chan<- prometheus.Metric, gauge prometheus.Gauge, value flo
 	ch <- gauge
 }
 
-func setDefaultPath(src, suffix string) (*url.URL, error) {
-	parsedURL, err := url.Parse(src)
+func parseRawURL(raw string) (*url.URL, error) {
+	u, err := url.ParseRequestURI(raw)
+	if err != nil || u.Host == "" {
+		u, repErr := url.ParseRequestURI("http://" + raw)
+		if repErr != nil {
+			fmt.Printf("Could not parse raw url: %s, error: %v", raw, err)
+			return nil, err
+		}
+		return u, nil
+	}
+	return u, nil
+}
+
+func setDefaultPath(src, defaultPath string) (*url.URL, error) {
+	u, err := parseRawURL(src)
 	if err != nil {
-		fmt.Println("Error parsing URL:", err)
 		return nil, err
 	}
 
-	// todo don't set path if path is provided already
-	parsedURL.Path = path.Join(parsedURL.Path, suffix)
-
-	if parsedURL.Scheme == "" {
-		parsedURL.Scheme = "http"
+	if u.Path == "" {
+		u.Path = defaultPath
 	}
 
-	if strings.HasSuffix(suffix, "/") {
-		parsedURL.Path = parsedURL.Path + "/"
-	}
-
-	return parsedURL, nil
+	return u, nil
 }
 
-func getURL() (string, error) {
-	u := os.Getenv("URL")
-	p, err := setDefaultPath(u, "/rawData")
+func getURL(src string) (string, error) {
+	p, err := setDefaultPath(src, "/rawData")
 	if err != nil {
 		return "", err
 	}
@@ -578,7 +581,7 @@ func shouldEnableDefaultCollectors() bool {
 func main() {
 	log.Println("starting")
 
-	u, err := getURL()
+	u, err := getURL(os.Getenv("URL"))
 	if err != nil {
 		log.Fatal(err)
 	}

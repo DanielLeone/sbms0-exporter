@@ -15,72 +15,48 @@ func readFileContent(t *testing.T, path string) []byte {
 	return content
 }
 
-func TestRawData(t *testing.T) {
-	content := readFileContent(t, "./__source__/rawData")
-	out := decodeResponse(content)
-	log.Printf("%+#v", out)
+func TestGetURLWorksForIP(t *testing.T) {
+	u, e := getURL("192.168.1.1")
+	assert.Nil(t, e)
+	assert.Equal(t, "http://192.168.1.1/rawData", u)
+}
 
-	assert.Equal(t, &SBMSData{
-		ts:             "2024-03-03T06:44:23",
-		soc:            100,
-		batteryVoltage: 27020,
-		batteryPower:   20.18394,
-		cells: []Cell{
-			{mV: 3375, isBalancing: false},
-			{mV: 3376, isBalancing: false},
-			{mV: 3382, isBalancing: false},
-			{mV: 3378, isBalancing: false},
-			{mV: 3397, isBalancing: false},
-			{mV: 3335, isBalancing: true},
-			{mV: 3402, isBalancing: false},
-			{mV: 3375, isBalancing: false},
-		},
-		minMV:               2500,
-		maxMV:               3750,
-		internalTemperature: 30.3,
-		externalTemperature: -45,
-		batteryCurrent:      747,
-		pv1Current:          5512,
-		pv2Current:          0,
-		externalCurrent:     0,
-		adc2:                0,
-		adc3:                0,
-		adc4:                0,
-		heat1:               0,
-		heat2:               11090,
-		flags: Flags{
-			OverVoltage:             false,
-			OverVoltageLock:         false,
-			UnderVoltage:            false,
-			UnderVoltageLock:        false,
-			InternalOverTemperature: false,
-			ChargeOverCurrent:       false,
-			DischargeOverCurrent:    false,
-			DischargeShortCircuit:   false,
-			CellFail:                false,
-			OpenCellWire:            false,
-			LowVoltageCell:          false,
-			EEPROMFail:              false,
-			ChargeFETActive:         true,
-			EndOfCharge:             false,
-			DischargeFETActive:      true,
-		},
-		batteryEnergyWh: 424445.2,
-		batteryEnergyAh: 15940.414,
-		pV1EnergyWh:     774464.4,
-		pV1EnergyAh:     28684.307,
-		pV2EnergyWh:     0,
-		pV2EnergyAh:     0,
-		loadEnergyWh:    276130.1,
-		loadEnergyAh:    10285.048,
-		extLoadEnergyWh: 421845.2,
-		extLoadEnergyAh: 15842.915,
-		dmpptEnergyWh:   0,
-		dmpptEnergyAh:   0,
-		cellType:        1,
-		capacity:        280,
-		status:          20480,
-	}, out)
+func TestGetURLWorksWithSingleSlashPathProvided(t *testing.T) {
+	u, e := getURL("192.168.1.1/")
+	assert.Nil(t, e)
+	// should use the single slash as the path, assuming we're using some kind of proxy here or something
+	assert.Equal(t, "http://192.168.1.1/", u)
+}
+
+func TestGetURLWorksWithWholePathProvided(t *testing.T) {
+	u, e := getURL("192.168.1.1/some/sub/path")
+	assert.Nil(t, e)
+	// should use the single slash as the path, assuming we're using some kind of proxy here or something
+	assert.Equal(t, "http://192.168.1.1/some/sub/path", u)
+}
+
+func TestGetURLWorksWithHTTPS(t *testing.T) {
+	u, e := getURL("https://192.168.1.1")
+	assert.Nil(t, e)
+	assert.Equal(t, "https://192.168.1.1/rawData", u)
+}
+
+func TestGetURLWorksWithHTTP(t *testing.T) {
+	u, e := getURL("http://192.168.1.1")
+	assert.Nil(t, e)
+	assert.Equal(t, "http://192.168.1.1/rawData", u)
+}
+
+func TestGetURLWorksWithHostname(t *testing.T) {
+	u, e := getURL("http://sbms.local")
+	assert.Nil(t, e)
+	assert.Equal(t, "http://sbms.local/rawData", u)
+}
+
+func TestGetURLWorksWithHostnameAndPath(t *testing.T) {
+	u, e := getURL("https://sbms.local/")
+	assert.Nil(t, e)
+	assert.Equal(t, "https://sbms.local/", u)
 }
 
 func TestRawData6(t *testing.T) {

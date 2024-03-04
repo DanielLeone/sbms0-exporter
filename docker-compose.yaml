@@ -1,0 +1,9 @@
+services:
+  sbms0-exporter:
+    restart: "unless-stopped"
+    build:
+      context: "."
+    environment:
+      - "URL=${URL}"
+    ports:
+      - "9000:9000"
