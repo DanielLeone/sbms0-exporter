@@ -260,20 +260,20 @@ func TestRawData8(t *testing.T) {
 func TestDebug1(t *testing.T) {
 	content := readFileContent(t, "./__source__/debug1")
 	out := decodeDebugResponse(content)
-	assert.Equal(t, []DebugInfo{
-		{name: "async_tcp", state: 1, value: 3, counter: 7.37905955e+08, percentage: 32},
-		{name: "loopTask", state: 1, value: 1, counter: 4.14155237e+08, percentage: 18},
-		{name: "IDLE0", state: 1, value: 0, counter: 3.402661223e+09, percentage: 150},
-		{name: "IDLE1", state: 1, value: 0, counter: 438596, percentage: 0},
-		{name: "tiT", state: 2, value: 18, counter: 6.7312419e+08, percentage: 29},
-		{name: "Tmr Svc", state: 2, value: 1, counter: 68, percentage: 0},
-		{name: "network_event", state: 2, value: 19, counter: 305, percentage: 0},
-		{name: "ipc1", state: 2, value: 24, counter: 1.130147e+06, percentage: 0},
-		{name: "ipc0", state: 2, value: 24, counter: 5.165267e+06, percentage: 0},
-		{name: "mdns", state: 2, value: 1, counter: 5.165444e+06, percentage: 0},
-		{name: "esp_timer", state: 2, value: 22, counter: 1.95894524e+08, percentage: 8},
-		{name: "wifi", state: 2, value: 23, counter: 2.141062145e+09, percentage: 94},
-		{name: "uart", state: 2, value: 15, counter: 1.228550683e+09, percentage: 54},
-		{name: "sys_evt", state: 2, value: 20, counter: 1809, percentage: 0},
+	assert.Equal(t, []SystemTaskInfo{
+		{name: "async_tcp", state: 1, priority: 3, runTimeCounter: 7.37905955e+08, runTimePercent: 32},
+		{name: "loopTask", state: 1, priority: 1, runTimeCounter: 4.14155237e+08, runTimePercent: 18},
+		{name: "IDLE0", state: 1, priority: 0, runTimeCounter: 3.402661223e+09, runTimePercent: 150},
+		{name: "IDLE1", state: 1, priority: 0, runTimeCounter: 438596, runTimePercent: 0},
+		{name: "tiT", state: 2, priority: 18, runTimeCounter: 6.7312419e+08, runTimePercent: 29},
+		{name: "Tmr Svc", state: 2, priority: 1, runTimeCounter: 68, runTimePercent: 0},
+		{name: "network_event", state: 2, priority: 19, runTimeCounter: 305, runTimePercent: 0},
+		{name: "ipc1", state: 2, priority: 24, runTimeCounter: 1.130147e+06, runTimePercent: 0},
+		{name: "ipc0", state: 2, priority: 24, runTimeCounter: 5.165267e+06, runTimePercent: 0},
+		{name: "mdns", state: 2, priority: 1, runTimeCounter: 5.165444e+06, runTimePercent: 0},
+		{name: "esp_timer", state: 2, priority: 22, runTimeCounter: 1.95894524e+08, runTimePercent: 8},
+		{name: "wifi", state: 2, priority: 23, runTimeCounter: 2.141062145e+09, runTimePercent: 94},
+		{name: "uart", state: 2, priority: 15, runTimeCounter: 1.228550683e+09, runTimePercent: 54},
+		{name: "sys_evt", state: 2, priority: 20, runTimeCounter: 1809, runTimePercent: 0},
 	}, out)
 }

@@ -95,10 +95,10 @@ var (
 	capacity        = promauto.NewGauge(prometheus.GaugeOpts{Namespace: "sbms", Name: "capacity"})
 	status          = promauto.NewGauge(prometheus.GaugeOpts{Namespace: "sbms", Name: "status"})
 
-	debugSvcCount   = promauto.NewGaugeVec(prometheus.GaugeOpts{Namespace: "sbms", Subsystem: "debug", Name: "count"}, []string{"svc"})
-	debugSvcPercent = promauto.NewGaugeVec(prometheus.GaugeOpts{Namespace: "sbms", Subsystem: "debug", Name: "percent"}, []string{"svc"})
-	debugSvcState   = promauto.NewGaugeVec(prometheus.GaugeOpts{Namespace: "sbms", Subsystem: "debug", Name: "state"}, []string{"svc"})
-	debugSvcValue   = promauto.NewGaugeVec(prometheus.GaugeOpts{Namespace: "sbms", Subsystem: "debug", Name: "value"}, []string{"svc"})
+	systemTaskPriority       = promauto.NewGaugeVec(prometheus.GaugeOpts{Namespace: "sbms", Subsystem: "system", Name: "task_priority"}, []string{"task"})
+	systemTaskRunTime        = promauto.NewGaugeVec(prometheus.GaugeOpts{Namespace: "sbms", Subsystem: "system", Name: "task_run_time"}, []string{"task"})
+	systemTaskRunTimePercent = promauto.NewGaugeVec(prometheus.GaugeOpts{Namespace: "sbms", Subsystem: "system", Name: "task_run_time_percent"}, []string{"task"})
+	systemTaskState          = promauto.NewGaugeVec(prometheus.GaugeOpts{Namespace: "sbms", Subsystem: "system", Name: "task_state"}, []string{"task"})
 )
 
 func cellVoltageGauge(idx int) prometheus.Gauge {
@@ -152,12 +152,12 @@ type Flags struct {
 	DischargeFETActive      bool
 }
 
-type DebugInfo struct {
-	name       string
-	state      float64
-	value      float64
-	counter    float64
-	percentage float64
+type SystemTaskInfo struct {
+	name           string
+	state          float64
+	priority       float64
+	runTimeCounter float64
+	runTimePercent float64
 }
 
 type SBMSData struct {
@@ -221,14 +221,14 @@ func binToBool(bin rune) bool {
 	}
 }
 
-func decodeDebugResponse(b []byte) []DebugInfo {
-	var output []DebugInfo
+func decodeDebugResponse(b []byte) []SystemTaskInfo {
+	var tasks []SystemTaskInfo
 	value := string(b)
 	for _, row := range strings.Split(value, "\n") {
 		if len(strings.TrimSpace(row)) <= 0 {
 			continue
 		}
-		dbg := new(DebugInfo)
+		task := new(SystemTaskInfo)
 		realIdx := 0
 		for _, column := range strings.Split(row, "\t") {
 			// account for "double tabs" or empty columns
@@ -238,26 +238,26 @@ func decodeDebugResponse(b []byte) []DebugInfo {
 			}
 			switch realIdx {
 			case 0:
-				dbg.name = trimmedValue
+				task.name = trimmedValue
 				break
 			case 1:
-				dbg.state = svcStateToValue(trimmedValue)
+				task.state = taskStateToValue(trimmedValue)
 				break
 			case 2:
-				dbg.value, _ = strconv.ParseFloat(trimmedValue, 64)
+				task.priority, _ = strconv.ParseFloat(trimmedValue, 64)
 				break
 			case 3:
-				dbg.counter, _ = strconv.ParseFloat(trimmedValue, 64)
+				task.runTimeCounter, _ = strconv.ParseFloat(trimmedValue, 64)
 				break
 			case 4:
-				dbg.percentage, _ = strconv.ParseFloat(strings.Trim(trimmedValue, "%"), 64)
+				task.runTimePercent, _ = strconv.ParseFloat(strings.Trim(trimmedValue, "%"), 64)
 				break
 			}
 			realIdx += 1
 		}
-		output = append(output, *dbg)
+		tasks = append(tasks, *task)
 	}
-	return output
+	return tasks
 }
 
 func decodeResponse(b []byte) *SBMSData {
@@ -325,8 +325,8 @@ func decodeResponse(b []byte) *SBMSData {
 	// and you start from the top left with OV flag and continue to right and then down to the last flag DFET
 	// and consider the OV as the least significant bit and DFET most significant bit
 	// then you get this binary number and convert to decimal
-	// that will be the value contained in this ERR Status
-	// and you can also see this number on the SBMS LCD just under the battery SOC value and also displayed as Status: in the html page.
+	// that will be the priority contained in this ERR Status
+	// and you can also see this number on the SBMS LCD just under the battery SOC priority and also displayed as Status: in the html page.
 
 	// For some reason I think this is the order, but I can't remember where I found it:
 	//  Ov Ovlk Uv Uvlk InternalOverTemperature ChargeOverCurrent DischargeOverCurrent DischargeShortCircuit CellFail OpenCellWire LowVoltageCell EEPROMFail ChargeFETActive EndOfCharge DischargeFETActive
@@ -454,7 +454,7 @@ func extractIntArrayLiteral(value string) ([]int64, error) {
 		out = append(out, parseInt)
 	}
 
-	log.Printf("value=%s", value)
+	log.Printf("priority=%s", value)
 	log.Printf("escaped=%s", escaped)
 	log.Printf("split=%#+v", split)
 	log.Printf("out=%#+v", out)
@@ -470,7 +470,7 @@ func extractStrLiteral(value string) []uint16 {
 	escape2 := strings.ReplaceAll(escape1, "\\\"", "\"")
 	runes := utf16.Encode([]rune(escape2))
 
-	log.Printf("value=%s", value)
+	log.Printf("priority=%s", value)
 	log.Printf("stripped=%s", stripped)
 	log.Printf("escaped=%s", escape2)
 	log.Printf("runes=%v", runes)
@@ -481,7 +481,7 @@ func extractStrLiteral(value string) []uint16 {
 type SBMS0Collector struct {
 	url string
 }
-type SBMS0DebugCollector struct {
+type SBMS0SystemCollector struct {
 	url string
 }
 
@@ -489,7 +489,7 @@ func (cc SBMS0Collector) Describe(ch chan<- *prometheus.Desc) {
 	prometheus.DescribeByCollect(cc, ch)
 }
 
-func (cc SBMS0DebugCollector) Describe(ch chan<- *prometheus.Desc) {
+func (cc SBMS0SystemCollector) Describe(ch chan<- *prometheus.Desc) {
 	prometheus.DescribeByCollect(cc, ch)
 }
 
@@ -585,7 +585,7 @@ func (cc SBMS0Collector) Collect(ch chan<- prometheus.Metric) {
 	setAndExport(ch, Ov, boolToFloat(response.flags.OverVoltage))
 }
 
-func (cc SBMS0DebugCollector) Collect(ch chan<- prometheus.Metric) {
+func (cc SBMS0SystemCollector) Collect(ch chan<- prometheus.Metric) {
 	resp, err := http.Get(cc.url)
 	if err != nil {
 		log.Fatalln(err)
@@ -598,28 +598,34 @@ func (cc SBMS0DebugCollector) Collect(ch chan<- prometheus.Metric) {
 	data := decodeDebugResponse(b)
 
 	// reset all the labels from last time
-	debugSvcCount.Reset()
-	debugSvcPercent.Reset()
-	debugSvcState.Reset()
-	debugSvcValue.Reset()
+	systemTaskPriority.Reset()
+	systemTaskRunTime.Reset()
+	systemTaskRunTimePercent.Reset()
+	systemTaskState.Reset()
 
 	for _, d := range data {
-		setAndExport(ch, debugSvcCount.WithLabelValues(d.name), d.counter)
-		setAndExport(ch, debugSvcPercent.WithLabelValues(d.name), d.percentage)
-		setAndExport(ch, debugSvcState.WithLabelValues(d.name), d.state)
-		setAndExport(ch, debugSvcValue.WithLabelValues(d.name), d.value)
+		setAndExport(ch, systemTaskPriority.WithLabelValues(d.name), d.priority)
+		setAndExport(ch, systemTaskRunTime.WithLabelValues(d.name), d.runTimeCounter)
+		setAndExport(ch, systemTaskRunTimePercent.WithLabelValues(d.name), d.runTimePercent)
+		setAndExport(ch, systemTaskState.WithLabelValues(d.name), d.state)
 	}
 }
 
-func svcStateToValue(state string) float64 {
-	switch state {
-	case "RDY":
-		return 1
-	case "BLK":
-		return 2
-	default:
+func taskStateToValue(state string) float64 {
+	// https://github.com/armageddon421/electrodacus-esp32/blob/1d8f5ec6a86613d09cdd9cef91cffe9b9a56a0bd/src/main.cpp#L697C1-L698C1
+	states := map[string]float64{
+		"RUN": 0,
+		"RDY": 1,
+		"BLK": 2,
+		"SUS": 3,
+		"DEL": 4,
+	}
+
+	value, ok := states[state]
+	if !ok {
 		return -1
 	}
+	return value
 }
 
 func setAndExport(ch chan<- prometheus.Metric, gauge prometheus.Gauge, value float64) {
@@ -687,7 +693,7 @@ func main() {
 	}
 
 	reg := prometheus.NewPedanticRegistry()
-	debugReg := prometheus.NewPedanticRegistry()
+	systemMetricsReg := prometheus.NewPedanticRegistry()
 
 	if shouldEnableDefaultCollectors() {
 		reg.MustRegister(
@@ -697,12 +703,12 @@ func main() {
 	}
 
 	reg.MustRegister(SBMS0Collector{url: u})
-	debugReg.MustRegister(SBMS0DebugCollector{url: debugURL})
+	systemMetricsReg.MustRegister(SBMS0SystemCollector{url: debugURL})
 
 	handler := promhttp.InstrumentMetricHandler(reg, promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	debugHandler := promhttp.InstrumentMetricHandler(debugReg, promhttp.HandlerFor(debugReg, promhttp.HandlerOpts{}))
+	systemMetricsHandler := promhttp.InstrumentMetricHandler(systemMetricsReg, promhttp.HandlerFor(systemMetricsReg, promhttp.HandlerOpts{}))
 
 	http.Handle("/metrics", handler)
-	http.Handle("/metrics_debug", debugHandler)
+	http.Handle("/metrics_system", systemMetricsHandler)
 	log.Fatal(http.ListenAndServe(":9000", nil))
 }
