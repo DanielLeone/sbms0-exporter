@@ -12,6 +12,11 @@ URL='IP_OF_SBMS0' docker compose up --build
 curl localhost:9000/metrics
 ```
 
+### docker image:
+```shell
+docker pull ghcr.io/danielleone/sbms0-exporter:main
+```
+
 ### how does it work?
 
 Calls the `rawData` endpoint of the SBMS0 device (requires Wifi Module)
