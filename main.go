@@ -249,7 +249,7 @@ func decodeDebugResponse(b []byte) []DebugInfo {
 				dbg.counter, _ = strconv.ParseFloat(column, 64)
 				break
 			case 4:
-				dbg.percentage, _ = strconv.ParseFloat(strings.Trim(column, "%"), 64)
+				dbg.percentage, _ = strconv.ParseFloat(strings.Trim(strings.TrimSpace(column), "%"), 64)
 				break
 			}
 			realIdx += 1
