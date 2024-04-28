@@ -94,6 +94,11 @@ var (
 	cellType        = promauto.NewGauge(prometheus.GaugeOpts{Namespace: "sbms", Name: "type"})
 	capacity        = promauto.NewGauge(prometheus.GaugeOpts{Namespace: "sbms", Name: "capacity"})
 	status          = promauto.NewGauge(prometheus.GaugeOpts{Namespace: "sbms", Name: "status"})
+
+	debugSvcCount   = promauto.NewGaugeVec(prometheus.GaugeOpts{Namespace: "sbms", Subsystem: "debug", Name: "count"}, []string{"svc"})
+	debugSvcPercent = promauto.NewGaugeVec(prometheus.GaugeOpts{Namespace: "sbms", Subsystem: "debug", Name: "percent"}, []string{"svc"})
+	debugSvcState   = promauto.NewGaugeVec(prometheus.GaugeOpts{Namespace: "sbms", Subsystem: "debug", Name: "state"}, []string{"svc"})
+	debugSvcValue   = promauto.NewGaugeVec(prometheus.GaugeOpts{Namespace: "sbms", Subsystem: "debug", Name: "value"}, []string{"svc"})
 )
 
 func cellVoltageGauge(idx int) prometheus.Gauge {
@@ -145,6 +150,14 @@ type Flags struct {
 	ChargeFETActive         bool
 	EndOfCharge             bool
 	DischargeFETActive      bool
+}
+
+type DebugInfo struct {
+	name       string
+	state      float64
+	value      float64
+	counter    float64
+	percentage float64
 }
 
 type SBMSData struct {
@@ -206,6 +219,44 @@ func binToBool(bin rune) bool {
 	} else {
 		return false
 	}
+}
+
+func decodeDebugResponse(b []byte) []DebugInfo {
+	var output []DebugInfo
+	value := string(b)
+	for _, row := range strings.Split(value, "\n") {
+		if len(strings.TrimSpace(row)) <= 0 {
+			continue
+		}
+		dbg := new(DebugInfo)
+		realIdx := 0
+		for _, column := range strings.Split(row, "\t") {
+			// account for "double tabs" or empty columns
+			if len(strings.TrimSpace(column)) <= 0 {
+				continue
+			}
+			switch realIdx {
+			case 0:
+				dbg.name = column
+				break
+			case 1:
+				dbg.state = svcStateToValue(column)
+				break
+			case 2:
+				dbg.value, _ = strconv.ParseFloat(column, 64)
+				break
+			case 3:
+				dbg.counter, _ = strconv.ParseFloat(column, 64)
+				break
+			case 4:
+				dbg.percentage, _ = strconv.ParseFloat(strings.Trim(column, "%"), 64)
+				break
+			}
+			realIdx += 1
+		}
+		output = append(output, *dbg)
+	}
+	return output
 }
 
 func decodeResponse(b []byte) *SBMSData {
@@ -429,16 +480,19 @@ func extractStrLiteral(value string) []uint16 {
 type SBMS0Collector struct {
 	url string
 }
+type SBMS0DebugCollector struct {
+	url string
+}
 
-// Describe is implemented with DescribeByCollect. That's possible because the
-// Collect method will always return the same two metrics with the same two
-// descriptors.
 func (cc SBMS0Collector) Describe(ch chan<- *prometheus.Desc) {
 	prometheus.DescribeByCollect(cc, ch)
 }
 
-// Collect collects the rawData endpoint directly from the SBMS0 device. Then internalTemperature
-// creates constant metrics on the fly based on the returned data.
+func (cc SBMS0DebugCollector) Describe(ch chan<- *prometheus.Desc) {
+	prometheus.DescribeByCollect(cc, ch)
+}
+
+// Collect collects the rawData endpoint directly from the SBMS0 device
 //
 // Note that Collect could be called concurrently, so we depend on
 // the /rawData endpoint to be concurrency-safe.
@@ -528,7 +582,43 @@ func (cc SBMS0Collector) Collect(ch chan<- prometheus.Metric) {
 	setAndExport(ch, Uv, boolToFloat(response.flags.UnderVoltage))
 	setAndExport(ch, Ovlk, boolToFloat(response.flags.OverVoltageLock))
 	setAndExport(ch, Ov, boolToFloat(response.flags.OverVoltage))
+}
 
+func (cc SBMS0DebugCollector) Collect(ch chan<- prometheus.Metric) {
+	resp, err := http.Get(cc.url)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.Printf("debug resp is\n%s\n", string(b))
+	data := decodeDebugResponse(b)
+
+	// reset all the labels from last time
+	debugSvcCount.Reset()
+	debugSvcPercent.Reset()
+	debugSvcState.Reset()
+	debugSvcValue.Reset()
+
+	for _, d := range data {
+		setAndExport(ch, debugSvcCount.WithLabelValues(d.name), d.counter)
+		setAndExport(ch, debugSvcPercent.WithLabelValues(d.name), d.percentage)
+		setAndExport(ch, debugSvcState.WithLabelValues(d.name), d.state)
+		setAndExport(ch, debugSvcValue.WithLabelValues(d.name), d.value)
+	}
+}
+
+func svcStateToValue(state string) float64 {
+	switch state {
+	case "RDY":
+		return 1
+	case "BLK":
+		return 2
+	default:
+		return -1
+	}
 }
 
 func setAndExport(ch chan<- prometheus.Metric, gauge prometheus.Gauge, value float64) {
@@ -570,6 +660,14 @@ func getURL(src string) (string, error) {
 	return p.String(), nil
 }
 
+func getDebugURL(src string) (string, error) {
+	p, err := setDefaultPath(src, "/debug")
+	if err != nil {
+		return "", err
+	}
+	return p.String(), nil
+}
+
 func shouldEnableDefaultCollectors() bool {
 	v := os.Getenv("ENABLE_DEFAULT_COLLECTORS")
 	if slices.Contains([]string{"t", "1", "true", "yes"}, strings.ToLower(strings.TrimSpace(v))) {
@@ -582,11 +680,13 @@ func main() {
 	log.Println("starting")
 
 	u, err := getURL(os.Getenv("URL"))
+	debugURL, err := getDebugURL(os.Getenv("URL"))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	reg := prometheus.NewPedanticRegistry()
+	debugReg := prometheus.NewPedanticRegistry()
 
 	if shouldEnableDefaultCollectors() {
 		reg.MustRegister(
@@ -596,9 +696,12 @@ func main() {
 	}
 
 	reg.MustRegister(SBMS0Collector{url: u})
+	debugReg.MustRegister(SBMS0DebugCollector{url: debugURL})
 
 	handler := promhttp.InstrumentMetricHandler(reg, promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+	debugHandler := promhttp.InstrumentMetricHandler(debugReg, promhttp.HandlerFor(debugReg, promhttp.HandlerOpts{}))
 
 	http.Handle("/metrics", handler)
+	http.Handle("/metrics_debug", debugHandler)
 	log.Fatal(http.ListenAndServe(":9000", nil))
 }

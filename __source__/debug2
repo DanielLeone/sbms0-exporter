@@ -1,0 +1,14 @@
+async_tcp		RDY		3		740803381		28%
+loopTask		RDY		1		763739825		29%
+IDLE0		RDY		0		3746463425		143%
+IDLE1		RDY		0		456404		0%
+tiT		BLK		18		676313537		25%
+Tmr Svc		BLK		1		68		0%
+ipc1		BLK		24		1130147		0%
+ipc0		BLK		24		5165267		0%
+mdns		BLK		1		5179917		0%
+uart		BLK		15		1232942520		47%
+esp_timer		BLK		22		196626802		7%
+wifi		BLK		23		2149753865		82%
+sys_evt		BLK		20		1809		0%
+network_event		BLK		19		305		0%
