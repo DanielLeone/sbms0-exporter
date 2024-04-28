@@ -232,24 +232,25 @@ func decodeDebugResponse(b []byte) []DebugInfo {
 		realIdx := 0
 		for _, column := range strings.Split(row, "\t") {
 			// account for "double tabs" or empty columns
-			if len(strings.TrimSpace(column)) <= 0 {
+			trimmedValue := strings.TrimSpace(column)
+			if len(trimmedValue) <= 0 {
 				continue
 			}
 			switch realIdx {
 			case 0:
-				dbg.name = column
+				dbg.name = trimmedValue
 				break
 			case 1:
-				dbg.state = svcStateToValue(column)
+				dbg.state = svcStateToValue(trimmedValue)
 				break
 			case 2:
-				dbg.value, _ = strconv.ParseFloat(column, 64)
+				dbg.value, _ = strconv.ParseFloat(trimmedValue, 64)
 				break
 			case 3:
-				dbg.counter, _ = strconv.ParseFloat(column, 64)
+				dbg.counter, _ = strconv.ParseFloat(trimmedValue, 64)
 				break
 			case 4:
-				dbg.percentage, _ = strconv.ParseFloat(strings.Trim(strings.TrimSpace(column), "%"), 64)
+				dbg.percentage, _ = strconv.ParseFloat(strings.Trim(trimmedValue, "%"), 64)
 				break
 			}
 			realIdx += 1
