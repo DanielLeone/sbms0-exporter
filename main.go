@@ -333,7 +333,11 @@ func decodeResponse(b []byte) *SBMSData {
 
 	errorFlags := int64(dcmp(56, 3, sbms))
 	errorBits := strconv.FormatInt(errorFlags, 2)
-	errorRunes := []rune(errorBits)
+
+	// in some cases I found this wasn't 15 bits, I'm guessing we prefix with zeros?
+	errorBitsPadded := fmt.Sprintf("%015s", errorBits)
+
+	errorRunes := []rune(errorBitsPadded)
 	output.flags = Flags{
 		DischargeFETActive:      binToBool(errorRunes[0]),
 		EndOfCharge:             binToBool(errorRunes[1]),
@@ -354,6 +358,8 @@ func decodeResponse(b []byte) *SBMSData {
 
 	output.minMV = int(dcmp(5, 2, xsbms))
 	output.maxMV = int(dcmp(3, 2, xsbms))
+
+	// todo sometimes we get zero from these counters for some reason, we should potentially exclude those as invalid
 
 	//Batt
 	output.batteryEnergyWh = dcmp(0*6, 6, eW) / 10
@@ -378,8 +384,6 @@ func decodeResponse(b []byte) *SBMSData {
 	//ExtLd
 	output.extLoadEnergyWh = dcmp(6*6, 6, eW) / 10
 	output.extLoadEnergyAh = dcmp(6*6, 6, eA) / 1000
-
-	log.Printf("extLoadEnergyWh is %f\n", output.extLoadEnergyWh)
 
 	output.cellType = dcmp(7, 1, xsbms)
 	output.capacity = dcmp(8, 3, xsbms)

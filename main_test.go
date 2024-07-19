@@ -257,6 +257,72 @@ func TestRawData8(t *testing.T) {
 	}, out)
 }
 
+func TestRawData9(t *testing.T) {
+	content := readFileContent(t, "./__source__/rawData9")
+	out := decodeResponse(content)
+	log.Printf("%+#v", out)
+	assert.Equal(t, &SBMSData{ts: "2024-07-10T13:42:12",
+		soc:            41,
+		batteryVoltage: 23160,
+		batteryPower:   16.37412,
+		cells: []Cell{
+			{mV: 2893, isBalancing: false},
+			{mV: 2959, isBalancing: false},
+			{mV: 2814, isBalancing: false},
+			{mV: 2888, isBalancing: false},
+			{mV: 2957, isBalancing: false},
+			{mV: 2863, isBalancing: false},
+			{mV: 2849, isBalancing: false},
+			{mV: 2937, isBalancing: false},
+		},
+		minMV:               2500,
+		maxMV:               3750,
+		internalTemperature: 24.8,
+		externalTemperature: -45,
+		batteryCurrent:      707,
+		pv1Current:          29,
+		pv2Current:          0,
+		externalCurrent:     0,
+		adc2:                0,
+		adc3:                0,
+		adc4:                0,
+		heat1:               0,
+		heat2:               11318,
+		flags: Flags{
+			OverVoltage:             false,
+			OverVoltageLock:         false,
+			UnderVoltage:            true,
+			UnderVoltageLock:        false,
+			InternalOverTemperature: false,
+			ChargeOverCurrent:       false,
+			DischargeOverCurrent:    false,
+			DischargeShortCircuit:   false,
+			CellFail:                false,
+			OpenCellWire:            false,
+			LowVoltageCell:          false,
+			EEPROMFail:              false,
+			ChargeFETActive:         true,
+			EndOfCharge:             false,
+			DischargeFETActive:      false,
+		},
+		batteryEnergyWh: 580629.2,
+		batteryEnergyAh: 21862.908,
+		pV1EnergyWh:     999996.2,
+		pV1EnergyAh:     37061.873,
+		pV2EnergyWh:     0,
+		pV2EnergyAh:     0,
+		loadEnergyWh:    373157.6,
+		loadEnergyAh:    13890.788,
+		extLoadEnergyWh: 577024.6,
+		extLoadEnergyAh: 21727.536,
+		dmpptEnergyWh:   0,
+		dmpptEnergyAh:   0,
+		cellType:        1,
+		capacity:        280,
+		status:          4100},
+		out)
+}
+
 func TestDebug1(t *testing.T) {
 	content := readFileContent(t, "./__source__/debug1")
 	out := decodeDebugResponse(content)
