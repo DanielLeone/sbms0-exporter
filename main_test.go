@@ -323,6 +323,140 @@ func TestRawData9(t *testing.T) {
 		out)
 }
 
+func TestRawData10(t *testing.T) {
+	content := readFileContent(t, "./__source__/rawData10")
+	out := decodeResponse(content)
+	log.Printf("%+#v", out)
+
+	// 2024/08/18 08:56:44 offset=24 count=2 sum=1360.000000 debug=rune 25 is 121 is y is 86.000000; rune 24 is 49 is 1 is 1274.000000;
+	assert.Equal(t, &SBMSData{
+		ts:             "2024-08-18T08:57:27",
+		soc:            96,
+		batteryVoltage: 26584,
+		batteryPower:   -133.930192,
+		cells: []Cell{
+			{mV: 3322, isBalancing: false},
+			{mV: 3325, isBalancing: false},
+			{mV: 3326, isBalancing: false},
+			{mV: 3325, isBalancing: false},
+			{mV: 3321, isBalancing: false},
+			{mV: 3323, isBalancing: false},
+			{mV: 3321, isBalancing: false},
+			{mV: 3321, isBalancing: false},
+		},
+		minMV:               2500,
+		maxMV:               3750,
+		internalTemperature: 91,
+		externalTemperature: -45,
+		batteryCurrent:      -5038,
+		pv1Current:          40,
+		pv2Current:          0,
+		externalCurrent:     5020,
+		adc2:                0,
+		adc3:                0,
+		adc4:                0,
+		heat1:               0,
+		heat2:               11447,
+		flags: Flags{OverVoltage: false,
+			OverVoltageLock:         false,
+			UnderVoltage:            false,
+			UnderVoltageLock:        false,
+			InternalOverTemperature: false,
+			ChargeOverCurrent:       false,
+			DischargeOverCurrent:    false,
+			DischargeShortCircuit:   false,
+			CellFail:                false,
+			OpenCellWire:            false,
+			LowVoltageCell:          false,
+			EEPROMFail:              false,
+			ChargeFETActive:         true,
+			EndOfCharge:             false,
+			DischargeFETActive:      true},
+		batteryEnergyWh: 656109.9,
+		batteryEnergyAh: 24730.208,
+		pV1EnergyWh:     1.1313939e+06,
+		pV1EnergyAh:     41961.569,
+		pV2EnergyWh:     0,
+		pV2EnergyAh:     0,
+		loadEnergyWh:    411293.7,
+		loadEnergyAh:    15315.235,
+		extLoadEnergyWh: 652139.9,
+		extLoadEnergyAh: 24580.983,
+		dmpptEnergyWh:   0,
+		dmpptEnergyAh:   0,
+		cellType:        1,
+		capacity:        280,
+		status:          20480},
+		out)
+}
+
+func TestRawData11(t *testing.T) {
+	content := readFileContent(t, "./__source__/rawData11")
+	out := decodeResponse(content)
+	log.Printf("%+#v", out)
+
+	// 2024/08/18 08:57:21 offset=24 count=2 sum=150.000000 debug=rune 25 is 94 is ^ is 59.000000; rune 24 is 36 is $ is 91.000000;
+	assert.Equal(t, &SBMSData{ts: "2024-08-18T08:58:04",
+		soc:            96,
+		batteryVoltage: 26583,
+		batteryPower:   -151.70918099999997,
+		cells: []Cell{
+			{mV: 3322, isBalancing: false},
+			{mV: 3325, isBalancing: false},
+			{mV: 3326, isBalancing: false},
+			{mV: 3325, isBalancing: false},
+			{mV: 3321, isBalancing: false},
+			{mV: 3322, isBalancing: false},
+			{mV: 3321, isBalancing: false},
+			{mV: 3321, isBalancing: false},
+		},
+		minMV:               2500,
+		maxMV:               3750,
+		internalTemperature: -30,
+		externalTemperature: -45,
+		batteryCurrent:      -5707,
+		pv1Current:          37,
+		pv2Current:          0,
+		externalCurrent:     5681,
+		adc2:                0,
+		adc3:                0,
+		adc4:                0,
+		heat1:               0,
+		heat2:               11451,
+		flags: Flags{OverVoltage: false,
+			OverVoltageLock:         false,
+			UnderVoltage:            false,
+			UnderVoltageLock:        false,
+			InternalOverTemperature: false,
+			ChargeOverCurrent:       false,
+			DischargeOverCurrent:    false,
+			DischargeShortCircuit:   false,
+			CellFail:                false,
+			OpenCellWire:            false,
+			LowVoltageCell:          false,
+			EEPROMFail:              false,
+			ChargeFETActive:         true,
+			EndOfCharge:             false,
+			DischargeFETActive:      true},
+		batteryEnergyWh: 656111.4,
+		batteryEnergyAh: 24730.263,
+		pV1EnergyWh:     1.1313939e+06,
+		pV1EnergyAh:     41961.569,
+		pV2EnergyWh:     0,
+		pV2EnergyAh:     0,
+		loadEnergyWh:    411293.7,
+		loadEnergyAh:    15315.236,
+		extLoadEnergyWh: 652141.3,
+		extLoadEnergyAh: 24581.038,
+		dmpptEnergyWh:   0,
+		dmpptEnergyAh:   0,
+		cellType:        1,
+		capacity:        280,
+		status:          20480,
+	},
+		out)
+}
+
 func TestDebug1(t *testing.T) {
 	content := readFileContent(t, "./__source__/debug1")
 	out := decodeDebugResponse(content)
